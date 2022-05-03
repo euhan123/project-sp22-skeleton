@@ -6,9 +6,12 @@ For usage, run `python3 solve.py --help`.
 """
 
 import argparse
+from audioop import add
+from locale import currency
 from pathlib import Path
 from typing import Callable, Dict
 
+from point import Point
 from instance import Instance
 from solution import Solution
 from file_wrappers import StdinFileWrapper, StdoutFileWrapper
@@ -20,9 +23,185 @@ def solve_naive(instance: Instance) -> Solution:
         towers=instance.cities,
     )
 
+def solve_greedy(instance: Instance) -> Solution:
+    length = instance.D
+    coverR = instance.R_s
+    penaltyR = instance.R_p
+    cities = instance.cities
+    N = instance.N
+    towers = []
+    towerDict = {}
+    citiesCovered = {}
+
+    def findPenalty(point):
+        penalty = 170
+        for i in towers:
+            if (Point.distance_sq(point, i) < penaltyR * penaltyR):
+                penalty *= 2
+
+        return penalty
+
+    def findCities(point):
+        count = 0
+        for i in cities:
+            if (Point.distance_sq(point, i) < coverR * coverR) and i not in citiesCovered:
+                count += 1
+
+        return count
+    
+    def checkCities(point):
+        for i in cities:
+            if (Point.distance_sq(point, i) < coverR * coverR):
+                xcoord = i.x
+                ycoord = i.y
+                string = str(xcoord) + " "  + str(ycoord)
+                citiesCovered[string] = 0
+
+
+    greedySolution = Solution(instance = instance, towers = towers)
+    while (not greedySolution.valid()):
+        minimumPenalty = [[], 0]
+        maxCity = 0
+        minX = 0
+        minY = 0
+        for i in range(length):
+            for j in range(length):
+                string = str(i) + " " + str(j)
+                if (string not in towerDict):
+                    tower = Point(i, j)
+                    currCities = findCities(tower)                        
+                    currPenalty = findPenalty(tower)
+                    if currCities > maxCity:
+                        minX = i
+                        minY = j
+                        maxCity = currCities
+                        minimumPenalty[1] = currPenalty
+                    elif currCities == maxCity:
+                        if currPenalty < minimumPenalty[1]:
+                            minX = i
+                            minY = j
+                            minimumPenalty[1] = currPenalty
+        
+        string = str(minX) + " " + str(minY)
+        towerDict[string] = 0
+        addTower = Point(minX, minY)
+        checkCities(addTower)
+        towers.append(addTower)
+        greedySolution = Solution(instance = instance, towers = towers)
+
+    return greedySolution
+
+def solve_greedy2(instance: Instance) -> Solution:
+    length = instance.D
+    coverR = instance.R_s
+    penaltyR = instance.R_p
+    cities = instance.cities
+    N = instance.N
+    towers = []
+    towerDict = {}
+    citiesCovered = {}
+
+    def findPenalty(point):
+        penalty = 170
+        for i in towers:
+            if (Point.distance_sq(point, i) < penaltyR * penaltyR):
+                penalty *= 2
+        return penalty
+
+    def findCities(point):
+        count = 0
+        for i in cities:
+            if (Point.distance_sq(point, i) < coverR * coverR) and i not in citiesCovered:
+                count += 1
+        return count
+    
+    def checkCities(point):
+        for i in cities:
+            if (Point.ditance_sq(point, i) < coverR * coverR):
+                xcoord = i.x
+                ycoord = i.y
+                string = xcoord + " "  + ycoord
+                citiesCovered[string] = 0
+                
+    def sum_penalty():
+        sum = 0
+        for i in towers:
+            sum += findPenalty(i)
+        return sum
+    
+    def better_tower(point):
+        maximum = findPenalty(point)
+        total = sum_penalty()
+        tow = Point(0,0)
+        for i in towers:
+            if(maximum < findPenalty(i)):
+                maximum = findPenalty(i)
+                tow = i
+        curr = findCities(tow)
+        for i in range(length):
+            for j in range(length):
+                string = i + " " + j
+                if(string not in towerDict):
+                    tower = Point(i, j)
+                    temp = findCities(tower)
+                    temp_pen = findPenalty(tower)
+                    if(temp >= curr and temp_pen < maximum and tower != tow):
+                        towers.remove(tow)
+                        towers.append(tower)
+                        if(total > sum_penalty()):
+                            curr = temp
+                            maximum = temp_pen
+                            tow = tower
+                            total = sum_penalty()
+                        else:
+                            towers.remove(tower)
+                            towers.append(tow)
+        return tow
+
+    greedySolution = Solution(instance = instance, towers = towers)
+    
+    while (not greedySolution.valid()):
+        minimumPenalty = [[], 0]
+        maxCity = 0
+        minX = 0
+        minY = 0
+        
+        for i in range(length):
+            for j in range(length):
+                string = i + " " + j
+                if (string not in towerDict):
+                    tower = Point(i, j)
+                    currCities = findCities(tower)           
+                    currPenalty = findPenalty(tower)
+                    if currCities > maxCity:
+                        minX = i
+                        minY = j
+                        maxCity = currCities
+                        minimumPenalty = currPenalty
+                    elif currCities == maxCity:
+                        if currPenalty < minimumPenalty:
+                            minX = i
+                            minY = j
+                            minimumPenalty = currPenalty
+        
+        string = minX + " " + minY
+        towerDict[string] = 0
+        addTower = Point(minX, minY)
+        checkCities(addTower)
+        towers.append(addTower)
+        temp = towers
+        temp_tower = better_tower(addTower)
+        while(temp != towers):
+            temp = towers
+            temo_tower  = better_tower(temp_tower)
+        greedySolution = Solution(instance = instance, towers = towers)
+
+    return greedySolution
+
 
 SOLVERS: Dict[str, Callable[[Instance], Solution]] = {
-    "naive": solve_naive
+    "naive": solve_naive,
+    "greedy": solve_greedy
 }
 
 

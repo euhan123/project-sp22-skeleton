@@ -25,6 +25,11 @@ def make_small_instance() -> Instance:
     """
     cities = []
     # YOUR CODE HERE
+    
+    
+
+
+    
     return Size.SMALL.instance(cities)
 
 
