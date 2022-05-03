@@ -36,7 +36,7 @@ def solver(size: Size, instance: Instance) -> Solution:
     elif size == Size.MEDIUM:
         return solve_greedy(instance)
     elif size == Size.LARGE:
-        return solve_greedy(instance)
+        return solve_greedy(instance) 
 
 
 # You shouldn't need to modify anything below this line.
